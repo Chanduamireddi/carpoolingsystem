@@ -4,7 +4,10 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import java.io.BufferedReader;
+import java.io.FileReader;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
@@ -34,20 +37,8 @@ public class CarpoolServlet extends HttpServlet {
     @Override
     public void init() throws ServletException {
         // Initialize a list of available carpool rides
-    	listOfAvailableRides = new ArrayList<>();
+        listOfAvailableRides = new ArrayList<>();
         logging.info("CarpoolServlet initialized. Available rides: " + listOfAvailableRides);
-    }
-
-    /**
-     * Log the requests done by the user
-     */
-    @Override
-    protected void service(HttpServletRequest servletRequest, HttpServletResponse servletResponse) throws ServletException, IOException {
-        // Logging incoming requests, including the request type and URL
-        String reqType = servletRequest.getMethod();
-        String reqURL = servletRequest.getRequestURL().toString();
-        logging.info("Received Requests. Type: " + reqType + ", URL: " + reqURL);
-        super.service(servletRequest, servletResponse);
     }
 
     /**
@@ -55,13 +46,43 @@ public class CarpoolServlet extends HttpServlet {
      */
     @Override
     protected void doGet(HttpServletRequest servletRequest, HttpServletResponse servletResponse) throws ServletException, IOException {
-        // Display Welcome message and list of rides available
         servletResponse.setContentType("text/html");
-        servletResponse.getWriter().println("Welcome to Carpool Booking System <br>");
-        servletResponse.getWriter().println("List of Ride Available Now : <br>");
-        for (String ridesList : listOfAvailableRides) {
-            servletResponse.getWriter().println(ridesList + "<br>");
+
+        // Read HTML file
+        StringBuilder responseHtml = new StringBuilder();
+        try (BufferedReader reader = new BufferedReader(new FileReader(getServletContext().getRealPath("/carpoolBookingSystem.html")))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                responseHtml.append(line).append("\n");
+            }
         }
+
+        // Insert available rides into HTML
+        String updatedHtml = responseHtml.toString().replace("<!-- Body to add rides -->", getRidesHtml());
+
+        // HTML response
+        PrintWriter writer = servletResponse.getWriter();
+        writer.println(updatedHtml);
+    }
+
+    /**
+     * Display Rides By Generating New HTML
+     */
+    private String getRidesHtml() {
+        StringBuilder ridesHtml = new StringBuilder();
+        if (listOfAvailableRides.isEmpty()) {
+            ridesHtml.append("<tr><td colspan='3'>Ohh No... No Rides Available at this time.</td></tr>");
+        } else {
+            for (String ride : listOfAvailableRides) {
+                ridesHtml.append("<tr>");
+                String[] rideDetails = ride.split(",");
+                for (String detail : rideDetails) {
+                    ridesHtml.append("<td>").append(detail).append("</td>");
+                }
+                ridesHtml.append("</tr>");
+            }
+        }
+        return ridesHtml.toString();
     }
 
     /**
@@ -69,16 +90,30 @@ public class CarpoolServlet extends HttpServlet {
      */
     @Override
     protected void doPost(HttpServletRequest servletRequest, HttpServletResponse servletResponse) throws ServletException, IOException {
-        // doGet method call to display content of POST requests
-        doGet(servletRequest, servletResponse);
+        // Retrieve form parameters
+        String startingLocation = servletRequest.getParameter("startingLocation");
+        String destination = servletRequest.getParameter("destination");
+        String seatsAvailable = servletRequest.getParameter("seatsAvailable");
+
+        // New Ride Details Format
+        String newRide = String.format("%s,%s,%s", startingLocation, destination, seatsAvailable);
+
+        // Appending new ride details to existing list
+        listOfAvailableRides.add(newRide);
+
+        // Log the addition of a new ride
+        logging.info("New ride added: " + newRide);
+
+        // Display updated list by sending back response to get method
+        servletResponse.sendRedirect(servletRequest.getContextPath() + "/carpool");
     }
 
     /**
-     * Log message indication servlet termination.
+     * Log message indicating servlet termination.
      */
     @Override
     public void destroy() {
         // Logging a message indicating that the servlet is being terminated
-    	logging.info("Carpool Servlet is being terminated.");
+        logging.info("Carpool Servlet is being terminated.");
     }
 }
