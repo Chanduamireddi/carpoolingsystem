@@ -22,6 +22,8 @@ public class CarpoolServlet extends HttpServlet {
     
     // Declaration of List variable
     private List<String> listOfAvailableRides;
+    // Lock object for synchronizing access 
+    private final Object lock = new Object(); 
     private static final Logger logging = Logger.getLogger(CarpoolServlet.class.getName());
 
     /**
@@ -70,16 +72,19 @@ public class CarpoolServlet extends HttpServlet {
      */
     private String getRidesHtml() {
         StringBuilder ridesHtml = new StringBuilder();
-        if (listOfAvailableRides.isEmpty()) {
-            ridesHtml.append("<tr><td colspan='3'>Ohh No... No Rides Available at this time.</td></tr>");
-        } else {
-            for (String ride : listOfAvailableRides) {
-                ridesHtml.append("<tr>");
-                String[] rideDetails = ride.split(",");
-                for (String detail : rideDetails) {
-                    ridesHtml.append("<td>").append(detail).append("</td>");
+        // Synchronization block
+        synchronized (lock) {
+            if (listOfAvailableRides.isEmpty()) {
+                ridesHtml.append("<tr><td colspan='3'>Ohh No... No Rides Available at this time.</td></tr>");
+            } else {
+                for (String ride : listOfAvailableRides) {
+                    ridesHtml.append("<tr>");
+                    String[] rideDetails = ride.split(",");
+                    for (String detail : rideDetails) {
+                        ridesHtml.append("<td>").append(detail).append("</td>");
+                    }
+                    ridesHtml.append("</tr>");
                 }
-                ridesHtml.append("</tr>");
             }
         }
         return ridesHtml.toString();
@@ -98,8 +103,10 @@ public class CarpoolServlet extends HttpServlet {
         // New Ride Details Format
         String newRide = String.format("%s,%s,%s", startingLocation, destination, seatsAvailable);
 
-        // Appending new ride details to existing list
-        listOfAvailableRides.add(newRide);
+        // Appending new ride details to existing list added synchronization block
+        synchronized (lock) {
+            listOfAvailableRides.add(newRide);
+        }
 
         // Log the addition of a new ride
         logging.info("New ride added: " + newRide);
