@@ -1,6 +1,7 @@
 package com.carpoolsystem;
 
 import jakarta.servlet.ServletException;
+import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -15,7 +16,10 @@ import java.util.logging.Logger;
 /**
  * Implementation of Servlet class CarpoolServlet
  * Handles Carpool bookings done using form
+ * Annotation based servlet configuration
  */
+
+@WebServlet("/carpool")
 public class CarpoolServlet extends HttpServlet {
 
     private static final long serialVersionUID = 1L;
